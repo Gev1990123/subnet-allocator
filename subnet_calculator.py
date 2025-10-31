@@ -1,6 +1,7 @@
 import ipaddress
 import math
 import argparse
+import csv
 
 def allocate_named_subnets(base_subnet, named_requirements):
     base_network = ipaddress.ip_network(base_subnet)
@@ -31,28 +32,41 @@ def parse_named_subnets(subnet_str):
         named_list.append((name.strip(), int(count.strip())))
     return named_list
 
+def format_output(allocated, remaining):
+    lines = []
+    lines.append("Allocated Subnets:")
+    lines.append("-" * 40)
+    for name, hosts, subnet in allocated:
+        lines.append(f"{name:<10} | Hosts: {hosts:<4} | Subnet: {subnet}")
+    lines.append("\nRemaining Unused Subnets:")
+    lines.append("-" * 40)
+    for subnet in remaining:
+        lines.append(f"{subnet}")
+    return "\n".join(lines)
+
 def main():
     parser = argparse.ArgumentParser(description="Allocate named subnets and show remaining space.")
     parser.add_argument("--base-subnet", required=True, help="Base subnet in CIDR notation")
     parser.add_argument("--subnets", required=True, help='Comma-separated list like "Wireless:500,Servers:200"')
+    parser.add_argument("--export", action="store_true", help="Export results to 'subnet_output.txt'")
 
     args = parser.parse_args()
     named_requirements = parse_named_subnets(args.subnets)
 
     try:
         allocated, remaining = allocate_named_subnets(args.base_subnet, named_requirements)
+        output = format_output(allocated, remaining)
 
-        print("\nAllocated Subnets:")
-        print("-" * 40)
-        for name, hosts, subnet in allocated:
-            print(f"{name:<10} | Hosts: {hosts:<4} | Subnet: {subnet}")
+        if args.export: 
+            with open("subnet_output.txt", "w") as f:
+                f.write(output)
+        else:
+            print(output)
 
-        print("\nRemaining Unused Subnets:")
-        print("-" * 40)
-        for subnet in remaining:
-            print(f"{subnet}")
     except ValueError as e:
         print(f"Error: {e}")
+
+    export = args.export
 
 if __name__ == "__main__":
     main()
